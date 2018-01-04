@@ -32,6 +32,8 @@ class MelisComposerService implements ServiceLocatorAwareInterface
     const DRY_RUN_ARGS      = '--dry-run';
     const ROOT_REQS         = '--root-reqs ';
     const WITH_DEPENDENCIES ='--with-dependencies';
+    const NO_UPDATE         = ' --no-update ';
+    const NO_PROGRESS       = ' --no-progress ';
 
     /**
      * @var ServiceManager
@@ -124,17 +126,13 @@ class MelisComposerService implements ServiceLocatorAwareInterface
      * Executes $ composer require command
      * @param string $package
      * @param string|null $version
-     * @param boolean $dryRun
      * @return string|StreamOutput
      */
-    public function download($package, $version = null, $dryRun = false)
+    public function download($package, $version = null)
     {
-        if($dryRun)
-            $this->setDryRun(true);
-
         $package = !empty($version) ? $package.':'.$version : $package;
 
-        return $this->runCommand(self::DOWNLOAD, $package,self::DEFAULT_ARGS);
+        return $this->runCommand(self::DOWNLOAD, $package,self::NO_PROGRESS . self::NO_UPDATE . self::DEFAULT_ARGS);
     }
 
     /**
