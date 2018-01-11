@@ -126,13 +126,16 @@ class MelisComposerService implements ServiceLocatorAwareInterface
      * Executes $ composer require command
      * @param string $package
      * @param string|null $version
+     * @param boolean $noInstall
      * @return string|StreamOutput
      */
-    public function download($package, $version = null)
+    public function download($package, $version = null, $noInstall = false)
     {
         $package = !empty($version) ? $package.':'.$version : $package;
 
-        return $this->runCommand(self::DOWNLOAD, $package,self::NO_PROGRESS . self::NO_UPDATE . self::DEFAULT_ARGS);
+        $args    = $noInstall === true ? self::NO_PROGRESS . self::NO_UPDATE . self::DEFAULT_ARGS : self::DEFAULT_ARGS;
+
+        return $this->runCommand(self::DOWNLOAD, $package,$args);
     }
 
     /**
@@ -170,7 +173,7 @@ class MelisComposerService implements ServiceLocatorAwareInterface
     {
         $translator = $this->getServiceLocator()->get('translator');
         $docPath    = str_replace(array('\\', 'public/../'), '', $this->getDocumentRoot());
-        $docPath    = substr($docPath, 0, strlen($docPath)-1); // remove last "/" trail
+        $docPath    = trim(substr($docPath, 0, strlen($docPath)-1)); // remove last "/" trail
 
 
         set_time_limit(-1);
@@ -203,8 +206,6 @@ class MelisComposerService implements ServiceLocatorAwareInterface
             chdir($docPath);
             print 'Command: ' . $commandString . '<br/>'.PHP_EOL;
             $composer->run($input, $output);
-
-            file_put_contents('CHARME.txt', base64_encode($output), FILE_APPEND);
 
             return $output;
         }
