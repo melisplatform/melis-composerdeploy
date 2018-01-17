@@ -204,7 +204,16 @@ class MelisComposerService implements ServiceLocatorAwareInterface
             $output->setFormatter($formatter);
 
             chdir($docPath);
-            print 'Command: ' . $commandString . '<br/>'.PHP_EOL;
+            
+            if(DIRECTORY_SEPARATOR == '/') {
+                /**
+                 * proc_open(): fork failed - Cannot allocate memory [fix] | linux only
+                 */
+                shell_exec('sudo /bin/dd if=/dev/zero of=/var/swap.1 bs=1M count=1024');
+                shell_exec('sudo /sbin/mkswap /var/swap.1');
+                shell_exec('sudo /sbin/swapon /var/swap.1');
+            }
+
             $composer->run($input, $output);
 
             return $output;
