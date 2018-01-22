@@ -204,7 +204,7 @@ class MelisComposerService implements ServiceLocatorAwareInterface
             $output->setFormatter($formatter);
 
             chdir($docPath);
-            
+
             if(DIRECTORY_SEPARATOR == '/') {
                 /**
                  * proc_open(): fork failed - Cannot allocate memory [fix] | linux only
