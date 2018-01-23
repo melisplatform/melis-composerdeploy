@@ -176,7 +176,7 @@ class MelisComposerService implements ServiceLocatorAwareInterface
         $docPath    = trim(substr($docPath, 0, strlen($docPath)-1)); // remove last "/" trail
 
 
-        set_time_limit(-1);
+        set_time_limit(0);
         ini_set ('memory_limit', -1);
         putenv('COMPOSER_HOME='. self::COMPOSER);
 
