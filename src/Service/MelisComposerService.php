@@ -189,8 +189,8 @@ class MelisComposerService implements ServiceLocatorAwareInterface
                 $dryRunArgs = self::DRY_RUN_ARGS;
             }
 
-
-            $commandString = "$cmd $package $dryRunArgs $args --working-dir=\"$docPath\"";
+            $noProgress    = self::NO_PROGRESS;
+            $commandString = "$cmd $package $dryRunArgs $args $noProgress --working-dir=\"$docPath\"";
             $input         = new StringInput($commandString);
             $output        = new StreamOutput(fopen('php://output','w'));
             $composer      = new Application();
