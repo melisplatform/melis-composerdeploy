@@ -34,6 +34,7 @@ class MelisComposerService implements ServiceLocatorAwareInterface
     const WITH_DEPENDENCIES ='--with-dependencies';
     const NO_UPDATE         = ' --no-update ';
     const NO_PROGRESS       = ' --no-progress ';
+    const IGNORE_REQ        = ' --ignore-platform-reqs';
 
     /**
      * @var ServiceManager
@@ -190,7 +191,8 @@ class MelisComposerService implements ServiceLocatorAwareInterface
             }
 
             $noProgress    = self::NO_PROGRESS;
-            $commandString = "$cmd $package $dryRunArgs $args $noProgress --working-dir=\"$docPath\"";
+            $ignoreReqs    = self::IGNORE_REQ;
+            $commandString = "$cmd $package $dryRunArgs $args $ignoreReqs $noProgress --working-dir=\"$docPath\"";
             $input         = new StringInput($commandString);
             $output        = new StreamOutput(fopen('php://output','w'));
             $composer      = new Application();
@@ -213,6 +215,8 @@ class MelisComposerService implements ServiceLocatorAwareInterface
                 shell_exec('sudo /sbin/mkswap /var/swap.1');
                 shell_exec('sudo /sbin/swapon /var/swap.1');
             }
+
+            echo 'Command: ' . $commandString . PHP_EOL;
 
             $composer->run($input, $output);
 
