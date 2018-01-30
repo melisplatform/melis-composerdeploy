@@ -145,7 +145,7 @@ class MelisComposerService implements ServiceLocatorAwareInterface
      */
     public function dumpAutoloader()
     {
-        return $this->runCommand(self::DUMP_AUTOLOAD,self::DEFAULT_ARGS);
+        return $this->runCommand(self::DUMP_AUTOLOAD, null, null, true);
     }
 
     /**
@@ -168,9 +168,10 @@ class MelisComposerService implements ServiceLocatorAwareInterface
      * @param $cmd the command type
      * @param null $package which package should be executed
      * @param $args composer command-line arguments
+	 * @param $noAddtlArguments
      * @return string|StreamOutput
      */
-    private function runCommand($cmd, $package = null, $args)
+    private function runCommand($cmd, $package = null, $args, $noAddtlArguments = false)
     {
         $translator = $this->getServiceLocator()->get('translator');
         $docPath    = str_replace(array('\\', 'public/../'), '', $this->getDocumentRoot());
@@ -197,6 +198,11 @@ class MelisComposerService implements ServiceLocatorAwareInterface
             $output        = new StreamOutput(fopen('php://output','w'));
             $composer      = new Application();
             $formatter     = $output->getFormatter();
+			
+			// override commandstring if noAddtlArguments is set to "true"
+			if($noAddtlArguments) {
+				$commandString = "$cmd --working-dir=\"$docPath\"";
+			}
 
             $formatter->setDecorated(true);
             $formatter->setStyle('error', new ComposerOutputFormatterStyle(ComposerOutputFormatterStyle::ERROR));
