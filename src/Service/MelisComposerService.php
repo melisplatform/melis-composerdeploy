@@ -143,7 +143,7 @@ class MelisComposerService implements ServiceLocatorAwareInterface
      * Executes $ composer dump-autoload comand
      * @return string|StreamOutput
      */
-    public function dumpAutoloader()
+    public function dumpAutoload()
     {
         return $this->runCommand(self::DUMP_AUTOLOAD, null, null, true);
     }
@@ -194,15 +194,16 @@ class MelisComposerService implements ServiceLocatorAwareInterface
             $noProgress    = self::NO_PROGRESS;
             $ignoreReqs    = self::IGNORE_REQ;
             $commandString = "$cmd $package $dryRunArgs $args $ignoreReqs $noProgress --working-dir=\"$docPath\"";
-            $input         = new StringInput($commandString);
-            $output        = new StreamOutput(fopen('php://output','w'));
-            $composer      = new Application();
-            $formatter     = $output->getFormatter();
-			
+
 			// override commandstring if noAddtlArguments is set to "true"
 			if($noAddtlArguments) {
 				$commandString = "$cmd --working-dir=\"$docPath\"";
 			}
+
+            $input     = new StringInput($commandString);
+            $output    = new StreamOutput(fopen('php://output','w'));
+            $composer  = new Application();
+            $formatter = $output->getFormatter();
 
             $formatter->setDecorated(true);
             $formatter->setStyle('error', new ComposerOutputFormatterStyle(ComposerOutputFormatterStyle::ERROR));
