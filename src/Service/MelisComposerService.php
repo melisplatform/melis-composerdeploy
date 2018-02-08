@@ -225,8 +225,6 @@ class MelisComposerService implements ServiceLocatorAwareInterface
                 shell_exec('sudo /sbin/swapon /var/swap.1');
             }
 
-            echo 'Command: ' . $commandString . PHP_EOL;
-
             $composer->run($input, $output);
 
             return $output;
