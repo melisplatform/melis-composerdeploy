@@ -202,8 +202,6 @@ class MelisComposerService implements ServiceLocatorAwareInterface
 				$commandString = "$cmd --working-dir=\"$docPath\"";
 			}
 
-            echo $commandString;
-
             $input     = new StringInput($commandString);
             $output    = new StreamOutput(fopen('php://output','w'));
             $composer  = new Application();
