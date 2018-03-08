@@ -36,6 +36,7 @@ class MelisComposerService implements ServiceLocatorAwareInterface
     const NO_PROGRESS       = '--no-progress ';
     const IGNORE_REQ        = '--ignore-platform-reqs';
 	const PREFER_DIST		= '--prefer-dist';
+	const NO_SCRIPTS        = '--no-scripts';
 
     /**
      * @var ServiceManager
@@ -195,7 +196,8 @@ class MelisComposerService implements ServiceLocatorAwareInterface
             $noProgress    = self::NO_PROGRESS;
             $ignoreReqs    = self::IGNORE_REQ;
 			$preferDist	   = self::PREFER_DIST;
-            $commandString = "$cmd $package $dryRunArgs $args $ignoreReqs $noProgress $preferDist --working-dir=\"$docPath\"";
+			$noScript      = self::NO_SCRIPTS;
+            $commandString = "$cmd $package $dryRunArgs $args $ignoreReqs $noProgress $noScript $preferDist --working-dir=\"$docPath\"";
 
 			// override commandstring if noAddtlArguments is set to "true"
 			if($noAddtlArguments) {
