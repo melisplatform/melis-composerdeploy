@@ -123,12 +123,16 @@ class MelisComposerService implements ServiceLocatorAwareInterface
             $ignoreReqs = self::IGNORE_REQ;
             $preferDist = self::PREFER_DIST;
             $noScript = self::NO_SCRIPTS;
-            $commandString = "$cmd $package $dryRunArgs $args $ignoreReqs $noProgress $noScript $preferDist --working-dir=\"$docPath\"";
 
-            // override commandstring if noAddtlArguments is set to "true"
-            if ($noAddtlArguments) {
-                $commandString = "$cmd --working-dir=\"$docPath\"";
-            }
+            if ($cmd !== self::REMOVE){
+                $commandString = "$cmd $package $dryRunArgs $args $ignoreReqs $noProgress $noScript $preferDist --working-dir=\"$docPath\"";
+
+                // override commandstring if noAddtlArguments is set to "true"
+                if ($noAddtlArguments) {
+                    $commandString = "$cmd --working-dir=\"$docPath\"";
+                }
+            }else
+                $commandString = "$cmd $package $ignoreReqs $noScript";
 
             $input = new StringInput($commandString);
             $output = new StreamOutput(fopen('php://output', 'w'));
