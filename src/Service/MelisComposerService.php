@@ -27,7 +27,7 @@ class MelisComposerService implements ServiceLocatorAwareInterface
     const DOWNLOAD = 'require';
     const DUMP_AUTOLOAD = 'dump-autoload';
 
-    const DEFAULT_ARGS = '--profile ';
+    const DEFAULT_ARGS = '--no-interaction --profile ';
     const REMOVE_ARGS = '-vv --no-scripts ';
     const DRY_RUN_ARGS = '--dry-run';
     const ROOT_REQS = '--root-reqs ';
