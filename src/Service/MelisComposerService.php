@@ -27,7 +27,7 @@ class MelisComposerService implements ServiceLocatorAwareInterface
     const DOWNLOAD = 'require';
     const DUMP_AUTOLOAD = 'dump-autoload';
 
-    const DEFAULT_ARGS = '--profile ';
+    const DEFAULT_ARGS = '--no-interaction --profile ';
     const REMOVE_ARGS = '-vv --no-scripts ';
     const DRY_RUN_ARGS = '--dry-run';
     const ROOT_REQS = '--root-reqs ';
@@ -123,12 +123,16 @@ class MelisComposerService implements ServiceLocatorAwareInterface
             $ignoreReqs = self::IGNORE_REQ;
             $preferDist = self::PREFER_DIST;
             $noScript = self::NO_SCRIPTS;
-            $commandString = "$cmd $package $dryRunArgs $args $ignoreReqs $noProgress $noScript $preferDist --working-dir=\"$docPath\"";
 
-            // override commandstring if noAddtlArguments is set to "true"
-            if ($noAddtlArguments) {
-                $commandString = "$cmd --working-dir=\"$docPath\"";
-            }
+            if ($cmd !== self::REMOVE){
+                $commandString = "$cmd $package $dryRunArgs $args $ignoreReqs $noProgress $noScript $preferDist --working-dir=\"$docPath\"";
+
+                // override commandstring if noAddtlArguments is set to "true"
+                if ($noAddtlArguments) {
+                    $commandString = "$cmd --working-dir=\"$docPath\"";
+                }
+            }else
+                $commandString = "$cmd $package $ignoreReqs $noScript";
 
             $input = new StringInput($commandString);
             $output = new StreamOutput(fopen('php://output', 'w'));
