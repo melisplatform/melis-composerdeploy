@@ -12,8 +12,8 @@ namespace MelisComposerDeploy\Service;
 use Composer\Console\Application;
 use Symfony\Component\Console\Input\StringInput;
 use Symfony\Component\Console\Output\StreamOutput;
-use Zend\ServiceManager\ServiceLocatorAwareInterface;
-use Zend\ServiceManager\ServiceLocatorInterface;
+use Laminas\ServiceManager\ServiceLocatorAwareInterface;
+use Laminas\ServiceManager\ServiceLocatorInterface;
 
 /**
  * This service handles the requests and commands that will be made into composer
@@ -39,7 +39,7 @@ class MelisComposerService implements ServiceLocatorAwareInterface
     const NO_SCRIPTS = '--no-scripts';
 
     /**
-     * @var \Zend\ServiceManager\ServiceLocatorInterface $serviceLocator
+     * @var \Laminas\ServiceManager\ServiceLocatorInterface $serviceLocator
      */
     public $serviceLocator;
 
@@ -164,7 +164,7 @@ class MelisComposerService implements ServiceLocatorAwareInterface
     }
 
     /**
-     * @return \Zend\ServiceManager\ServiceLocatorInterface
+     * @return \Laminas\ServiceManager\ServiceLocatorInterface
      */
     public function getServiceLocator()
     {
@@ -172,7 +172,7 @@ class MelisComposerService implements ServiceLocatorAwareInterface
     }
 
     /**
-     * @param \Zend\ServiceManager\ServiceLocatorInterface $sl
+     * @param \Laminas\ServiceManager\ServiceLocatorInterface $sl
      *
      * @return $this
      */
