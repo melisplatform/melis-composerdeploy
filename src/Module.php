@@ -13,14 +13,13 @@ use Laminas\Stdlib\ArrayUtils;
 
 class Module
 {
-
     public function getConfig()
     {
-        $config = array();
-        $configFiles = array(
+        $config = [];
+        $configFiles = [
             include __DIR__ . '/../config/module.config.php',
             include __DIR__ . '/../config/diagnostic.config.php',
-        );
+        ];
 
         foreach ($configFiles as $file) {
             $config = ArrayUtils::merge($config, $file);
@@ -31,13 +30,13 @@ class Module
 
     public function getAutoloaderConfig()
     {
-        return array(
-            'Laminas\Loader\StandardAutoloader' => array(
-                'namespaces' => array(
+        return [
+            'Laminas\Loader\StandardAutoloader' => [
+                'namespaces' => [
                     __NAMESPACE__ => __DIR__ . '/src/' . __NAMESPACE__,
-                ),
-            ),
-        );
+                ],
+            ],
+        ];
     }
 
 }

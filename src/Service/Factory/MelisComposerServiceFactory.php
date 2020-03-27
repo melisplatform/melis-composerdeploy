@@ -9,18 +9,14 @@
 
 namespace MelisComposerDeploy\Service\Factory;
 
-use Laminas\ServiceManager\ServiceLocatorInterface;
-use Laminas\ServiceManager\FactoryInterface;
-use MelisComposerDeploy\Service\MelisComposerService;
+use Interop\Container\ContainerInterface;
 
-class MelisComposerServiceFactory implements FactoryInterface
+class MelisComposerServiceFactory
 {
-    public function createService(ServiceLocatorInterface $sl)
+    public function __invoke(ContainerInterface $container, $requestedName)
     {
-        $service = new MelisComposerService();
-        $service->setServiceLocator($sl);
-
-        return $service;
+        $instance = new $requestedName();
+        $instance->setServiceManager($container);
+        return $instance;
     }
-
 }

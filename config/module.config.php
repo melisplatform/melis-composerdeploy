@@ -10,7 +10,10 @@
 return [
     'service_manager' => [
         'factories' => [
-            'MelisComposerService' => \MelisComposerDeploy\Service\Factory\MelisComposerServiceFactory::class,
+            MelisComposerDeploy\Service\MelisComposerService::class => \MelisComposerDeploy\Service\Factory\MelisComposerServiceFactory::class,
         ],
+        'aliases' => [
+            'MelisComposerService' => MelisComposerDeploy\Service\MelisComposerService::class
+        ]
     ],
 ];
