@@ -9,9 +9,6 @@
 
 return [
     'service_manager' => [
-        'factories' => [
-            MelisComposerDeploy\Service\MelisComposerService::class => \MelisComposerDeploy\Service\Factory\MelisComposerServiceFactory::class,
-        ],
         'aliases' => [
             'MelisComposerService' => MelisComposerDeploy\Service\MelisComposerService::class
         ]

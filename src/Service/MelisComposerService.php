@@ -11,13 +11,14 @@ namespace MelisComposerDeploy\Service;
 
 use Composer\Console\Application;
 use Laminas\ServiceManager\ServiceManager;
+use MelisCore\Service\MelisServiceManager;
 use Symfony\Component\Console\Input\StringInput;
 use Symfony\Component\Console\Output\StreamOutput;
 
 /**
  * This service handles the requests and commands that will be made into composer
  */
-class MelisComposerService
+class MelisComposerService extends MelisServiceManager
 {
     const COMPOSER = __DIR__ . '/../../bin/extracted-composer/composer';
     const INSTALL = 'install';
@@ -50,28 +51,6 @@ class MelisComposerService
      * @var boolean
      */
     protected $isDryRun;
-
-    public $serviceManager;
-
-    /**
-     * @param \Laminas\ServiceManager\ServiceLocatorInterface $sl
-     *
-     * @return $this
-     */
-    public function setServiceManager(ServiceManager $serviceManager)
-    {
-        $this->serviceManager = $serviceManager;
-
-        return $this;
-    }
-
-    /**
-     * @return \Laminas\ServiceManager\ServiceLocatorInterface
-     */
-    public function getServiceManager()
-    {
-        return $this->serviceManager;
-    }
 
     /**
      * Executes a $ composer update command
