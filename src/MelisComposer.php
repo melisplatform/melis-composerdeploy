@@ -14,6 +14,8 @@ class MelisComposer
      */
     protected $composer;
 
+    public $packages;
+
     /**
      * @param Composer $composer
      *
@@ -51,8 +53,12 @@ class MelisComposer
      */
     public function getComposerModulePath($moduleName, $returnFullPath = true)
     {
-        $repos = $this->getComposer()->getRepositoryManager()->getLocalRepository();
-        $packages = $repos->getPackages();
+        if (!$this->packages) {
+            $repos = $this->getComposer()->getRepositoryManager()->getLocalRepository();
+            $packages = $repos->getPackages();
+        }else 
+            $packages = $this->packages;
+        
 
         if (!empty($packages)) {
             foreach ($packages as $repo) {
