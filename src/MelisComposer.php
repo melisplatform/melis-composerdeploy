@@ -34,7 +34,7 @@ class MelisComposer
         if (is_null($this->composer)) {
             // required by composer factory but not used to parse local repositories
             if (!isset($_ENV['COMPOSER_HOME'])) {
-                putenv("COMPOSER_HOME=/tmp");
+                putenv("COMPOSER_HOME=".$_SERVER['DOCUMENT_ROOT'] . '/../');
             }
             $factory = new Factory();
             $this->setComposer($factory->createComposer(new NullIO()));
