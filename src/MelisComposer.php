@@ -14,6 +14,8 @@ class MelisComposer
      */
     protected $composer;
 
+    public $packages;
+
     /**
      * @param Composer $composer
      *
@@ -34,7 +36,7 @@ class MelisComposer
         if (is_null($this->composer)) {
             // required by composer factory but not used to parse local repositories
             if (!isset($_ENV['COMPOSER_HOME'])) {
-                putenv("COMPOSER_HOME=".$_SERVER['DOCUMENT_ROOT'] . '/../');
+                putenv("COMPOSER_HOME=/tmp");
             }
             $factory = new Factory();
             $this->setComposer($factory->createComposer(new NullIO()));
@@ -51,8 +53,12 @@ class MelisComposer
      */
     public function getComposerModulePath($moduleName, $returnFullPath = true)
     {
-        $repos = $this->getComposer()->getRepositoryManager()->getLocalRepository();
-        $packages = $repos->getPackages();
+        if (!$this->packages) {
+            $repos = $this->getComposer()->getRepositoryManager()->getLocalRepository();
+            $packages = $repos->getPackages();
+        }else 
+            $packages = $this->packages;
+        
 
         if (!empty($packages)) {
             foreach ($packages as $repo) {
