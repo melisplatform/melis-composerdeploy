@@ -5,7 +5,6 @@ namespace MelisComposerDeploy;
 use Composer\Composer;
 use Composer\Factory;
 use Composer\IO\NullIO;
-use Composer\Package\CompletePackage;
 
 class MelisComposer
 {
@@ -46,6 +45,8 @@ class MelisComposer
     }
 
     /**
+     * Return Melis modules path
+     *
      * @param $moduleName
      * @param bool $returnFullPath
      *
@@ -53,33 +54,46 @@ class MelisComposer
      */
     public function getComposerModulePath($moduleName, $returnFullPath = true)
     {
-        if (!$this->packages) {
-            $repos = $this->getComposer()->getRepositoryManager()->getLocalRepository();
-            $packages = $repos->getPackages();
-        }else 
-            $packages = $this->packages;
-        
+        foreach ($this->getInstalledPackages() As $package) {
 
-        if (!empty($packages)) {
-            foreach ($packages as $repo) {
-                if ($repo->getType() == 'melisplatform-module') {
-                    if (array_key_exists('module-name', $repo->getExtra())
-                        && $moduleName == $repo->getExtra()['module-name']) {
-                        foreach ($repo->getRequires() as $require) {
-                            $source = $require->getSource();
+            if ($package->type == 'melisplatform-module' && !empty($package->extra)) {
 
-                            if ($returnFullPath) {
-                                return $_SERVER['DOCUMENT_ROOT'] . '/../vendor/' . $source;
-                            } else {
-                                return '/vendor/' . $source;
-                            }
+                $extra = (array) $package->extra ?? [];
+                if (array_key_exists('module-name', $extra)) {
+
+                    if ($moduleName == $extra['module-name']) {
+
+                        // Package name as Vendor package path
+                        $packageName = $package->name;
+
+                        if ($returnFullPath) {
+                            return $_SERVER['DOCUMENT_ROOT'] . '/../vendor/' . $packageName;
+                        } else {
+                            return '/vendor/' . $packageName;
                         }
                     }
                 }
             }
         }
 
-        return '';
+        return null;
+    }
+
+    /**
+     * Composer packages installed
+     * This will get the /vendor/composer/installed.json
+     * where the list of packages stored
+     *
+     * @return array
+     */
+    public function getInstalledPackages()
+    {
+        if (!$this->packages) {
+            $installedPackagesJson = $_SERVER['DOCUMENT_ROOT'].'/../vendor/composer/installed.json';
+            $this->packages = (array) \Zend\Json\Json::decode(file_get_contents($installedPackagesJson));
+        }
+
+        return $this->packages;
     }
 
 }
