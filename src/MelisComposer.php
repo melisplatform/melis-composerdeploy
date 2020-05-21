@@ -89,7 +89,10 @@ class MelisComposer
     public function getInstalledPackages()
     {
         if (!$this->packages) {
-            $installedPackagesJson = $_SERVER['DOCUMENT_ROOT'].'/../vendor/composer/installed.json';
+
+            $docRoot = $_SERVER['DOCUMENT_ROOT'] ? $_SERVER['DOCUMENT_ROOT'].'/../' : './';
+
+            $installedPackagesJson = $docRoot.'vendor/composer/installed.json';
             $this->packages = (array) \Zend\Json\Json::decode(file_get_contents($installedPackagesJson));
         }
 
