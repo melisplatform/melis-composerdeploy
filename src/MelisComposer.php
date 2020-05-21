@@ -96,4 +96,23 @@ class MelisComposer
         return $this->packages;
     }
 
+    /**
+     * Melis Packages installed
+     * Only packages installed in vendor/melisplatform
+     * with type of melisplatform-module and
+     * extra module-name
+     */
+    public function getMelisPackages()
+    {
+        $melisPackages = array_filter($this->getInstalledPackages(), function($package) {
+            $type = $package->type;
+            $extra = $package->extra ?? [];
+
+            /** @var CompletePackage $package */
+            return $type === 'melisplatform-module' &&
+                array_key_exists('module-name', $extra);
+        });
+
+        return $melisPackages;
+    }
 }
