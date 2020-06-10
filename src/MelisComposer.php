@@ -93,7 +93,7 @@ class MelisComposer
             $docRoot = $_SERVER['DOCUMENT_ROOT'] ? $_SERVER['DOCUMENT_ROOT'].'/../' : './';
 
             $installedPackagesJson = $docRoot.'vendor/composer/installed.json';
-            $this->packages = (array) \Zend\Json\Json::decode(file_get_contents($installedPackagesJson));
+            $this->packages = (array) \Laminas\Json\Json::decode(file_get_contents($installedPackagesJson));
         }
 
         return $this->packages;
