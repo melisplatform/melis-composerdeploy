@@ -66,7 +66,7 @@ class MelisComposer
                         // Package name as Vendor package path
                         $packageName = $package->name;
 
-                        if ($returnFullPath) {
+                        if ($returnFullPath && php_sapi_name() != "cli") {
                             return $_SERVER['DOCUMENT_ROOT'] . '/../vendor/' . $packageName;
                         } else {
                             return '/vendor/' . $packageName;
