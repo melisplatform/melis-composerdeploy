@@ -94,6 +94,12 @@ class MelisComposer
 
             $installedPackagesJson = $docRoot.'vendor/composer/installed.json';
             $this->packages = (array) \Laminas\Json\Json::decode(file_get_contents($installedPackagesJson));
+
+            // forward compatibility for composer v2 installed.json
+            if (isset($this->packages['packages'])) {
+                $this->packages = $this->packages['packages'];
+            }
+
         }
 
         return $this->packages;
