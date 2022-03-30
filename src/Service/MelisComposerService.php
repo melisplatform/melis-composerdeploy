@@ -94,12 +94,11 @@ class MelisComposerService extends MelisServiceManager
      * @return string|\Symfony\Component\Console\Output\StreamOutput
      * @throws \Exception
      */
-    private function runCommand($cmd, $package = null, $args, $noAddtlArguments = false)
+    private function runCommand($cmd, $package, $args, $noAddtlArguments = false)
     {
         $translator = $this->getServiceManager()->get('translator');
         $docPath = str_replace(['\\', 'public/../'], '', $this->getDocumentRoot());
         $docPath = trim(substr($docPath, 0, strlen($docPath) - 1)); // remove last "/" trail
-
 
         set_time_limit(0);
         ini_set('memory_limit', -1);       
