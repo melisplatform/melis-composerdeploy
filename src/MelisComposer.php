@@ -115,11 +115,11 @@ class MelisComposer
     {
         return array_filter($this->getInstalledPackages(), function($package) {
             $type = $package->type;
-            $extra = $package->extra ?? [];
+            $extra = $package->extra ?? (object)[];
 
             /** @var CompletePackage $package */
             return $type === 'melisplatform-module' &&
-                array_key_exists('module-name', $extra);
+                property_exists($extra, 'module-name');
         });
     }
 }
