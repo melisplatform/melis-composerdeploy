@@ -32,7 +32,7 @@ class ComposerOutputFormatterStyle implements OutputFormatterStyleInterface
      *
      * @param string $color The color name
      */
-    public function setForeground($color = null)
+    public function setForeground(?string $color = null)
     {
         $this->foreground = $color;
     }
@@ -42,7 +42,7 @@ class ComposerOutputFormatterStyle implements OutputFormatterStyleInterface
      *
      * @param string $color The color name
      */
-    public function setBackground($color = null)
+    public function setBackground(?string $color = null)
     {
         $this->background = $color;
     }
@@ -52,7 +52,7 @@ class ComposerOutputFormatterStyle implements OutputFormatterStyleInterface
      *
      * @param string $option The option name
      */
-    public function setOption($option)
+    public function setOption(string $option)
     {
         return;
     }
@@ -62,7 +62,7 @@ class ComposerOutputFormatterStyle implements OutputFormatterStyleInterface
      *
      * @param string $option The option name
      */
-    public function unsetOption($option)
+    public function unsetOption(string $option)
     {
         return;
     }
@@ -83,7 +83,7 @@ class ComposerOutputFormatterStyle implements OutputFormatterStyleInterface
      *
      * @return string
      */
-    public function apply($text)
+    public function apply(string $text): string
     {
         $foreground = null;
         $background = null;
