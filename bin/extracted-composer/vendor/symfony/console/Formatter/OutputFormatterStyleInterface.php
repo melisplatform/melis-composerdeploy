@@ -1,64 +1,52 @@
 <?php
 
-
-
-
-
-
-
-
-
+/*
+ * This file is part of the Symfony package.
+ *
+ * (c) Fabien Potencier <fabien@symfony.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
 
 namespace Symfony\Component\Console\Formatter;
 
-
-
-
-
-
+/**
+ * Formatter style interface for defining styles.
+ *
+ * @author Konstantin Kudryashov <ever.zet@gmail.com>
+ */
 interface OutputFormatterStyleInterface
 {
+    /**
+     * Sets style foreground color.
+     */
+    public function setForeground(string $color = null);
 
+    /**
+     * Sets style background color.
+     */
+    public function setBackground(string $color = null);
 
+    /**
+     * Sets some specific style option.
+     */
+    public function setOption(string $option);
 
+    /**
+     * Unsets some specific style option.
+     */
+    public function unsetOption(string $option);
 
+    /**
+     * Sets multiple style options at once.
+     */
+    public function setOptions(array $options);
 
-public function setForeground($color = null);
-
-
-
-
-
-
-public function setBackground($color = null);
-
-
-
-
-
-
-public function setOption($option);
-
-
-
-
-
-
-public function unsetOption($option);
-
-
-
-
-
-
-public function setOptions(array $options);
-
-
-
-
-
-
-
-
-public function apply($text);
+    /**
+     * Applies the style to a given text.
+     *
+     * @return string
+     */
+    public function apply(string $text);
 }

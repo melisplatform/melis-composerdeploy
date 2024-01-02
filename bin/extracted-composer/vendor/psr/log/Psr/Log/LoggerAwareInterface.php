@@ -2,17 +2,17 @@
 
 namespace Psr\Log;
 
-
-
-
+/**
+ * Describes a logger-aware instance.
+ */
 interface LoggerAwareInterface
 {
-
-
-
-
-
-
-
-public function setLogger(LoggerInterface $logger);
+    /**
+     * Sets a logger instance on the object.
+     *
+     * @param LoggerInterface $logger
+     *
+     * @return void
+     */
+    public function setLogger(LoggerInterface $logger);
 }

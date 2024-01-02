@@ -1,123 +1,128 @@
 <?php
 
-
-
-
-
-
-
-
-
+/*
+ * This file is part of the Symfony package.
+ *
+ * (c) Fabien Potencier <fabien@symfony.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
 
 namespace Symfony\Component\Console\Output;
 
-use Symfony\Component\Console\Formatter\OutputFormatter;
+use Symfony\Component\Console\Formatter\NullOutputFormatter;
 use Symfony\Component\Console\Formatter\OutputFormatterInterface;
 
-
-
-
-
-
-
-
-
+/**
+ * NullOutput suppresses all output.
+ *
+ *     $output = new NullOutput();
+ *
+ * @author Fabien Potencier <fabien@symfony.com>
+ * @author Tobias Schultze <http://tobion.de>
+ */
 class NullOutput implements OutputInterface
 {
+    private $formatter;
 
+    /**
+     * {@inheritdoc}
+     */
+    public function setFormatter(OutputFormatterInterface $formatter)
+    {
+        // do nothing
+    }
 
+    /**
+     * {@inheritdoc}
+     */
+    public function getFormatter()
+    {
+        if ($this->formatter) {
+            return $this->formatter;
+        }
+        // to comply with the interface we must return a OutputFormatterInterface
+        return $this->formatter = new NullOutputFormatter();
+    }
 
-public function setFormatter(OutputFormatterInterface $formatter)
-{
+    /**
+     * {@inheritdoc}
+     */
+    public function setDecorated(bool $decorated)
+    {
+        // do nothing
+    }
 
- }
+    /**
+     * {@inheritdoc}
+     */
+    public function isDecorated()
+    {
+        return false;
+    }
 
+    /**
+     * {@inheritdoc}
+     */
+    public function setVerbosity(int $level)
+    {
+        // do nothing
+    }
 
+    /**
+     * {@inheritdoc}
+     */
+    public function getVerbosity()
+    {
+        return self::VERBOSITY_QUIET;
+    }
 
+    /**
+     * {@inheritdoc}
+     */
+    public function isQuiet()
+    {
+        return true;
+    }
 
-public function getFormatter()
-{
+    /**
+     * {@inheritdoc}
+     */
+    public function isVerbose()
+    {
+        return false;
+    }
 
- return new OutputFormatter();
-}
+    /**
+     * {@inheritdoc}
+     */
+    public function isVeryVerbose()
+    {
+        return false;
+    }
 
+    /**
+     * {@inheritdoc}
+     */
+    public function isDebug()
+    {
+        return false;
+    }
 
+    /**
+     * {@inheritdoc}
+     */
+    public function writeln($messages, int $options = self::OUTPUT_NORMAL)
+    {
+        // do nothing
+    }
 
-
-public function setDecorated($decorated)
-{
-
- }
-
-
-
-
-public function isDecorated()
-{
-return false;
-}
-
-
-
-
-public function setVerbosity($level)
-{
-
- }
-
-
-
-
-public function getVerbosity()
-{
-return self::VERBOSITY_QUIET;
-}
-
-
-
-
-public function isQuiet()
-{
-return true;
-}
-
-
-
-
-public function isVerbose()
-{
-return false;
-}
-
-
-
-
-public function isVeryVerbose()
-{
-return false;
-}
-
-
-
-
-public function isDebug()
-{
-return false;
-}
-
-
-
-
-public function writeln($messages, $options = self::OUTPUT_NORMAL)
-{
-
- }
-
-
-
-
-public function write($messages, $newline = false, $options = self::OUTPUT_NORMAL)
-{
-
- }
+    /**
+     * {@inheritdoc}
+     */
+    public function write($messages, bool $newline = false, int $options = self::OUTPUT_NORMAL)
+    {
+        // do nothing
+    }
 }

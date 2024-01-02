@@ -1,164 +1,203 @@
-<?php
+<?php declare(strict_types=1);
 
-
-
-
-
-
-
-
-
-
+/*
+ * This file is part of Composer.
+ *
+ * (c) Nils Adermann <naderman@naderman.de>
+ *     Jordi Boggiano <j.boggiano@seld.be>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
 
 namespace Composer\Repository;
 
+use Composer\Package\BasePackage;
 use Composer\Package\PackageInterface;
 
-
-
-
-
-
-class CompositeRepository extends BaseRepository
+/**
+ * Composite repository.
+ *
+ * @author Beau Simensen <beau@dflydev.com>
+ */
+class CompositeRepository implements RepositoryInterface
 {
+    /**
+     * List of repositories
+     * @var RepositoryInterface[]
+     */
+    private $repositories;
 
+    /**
+     * Constructor
+     * @param RepositoryInterface[] $repositories
+     */
+    public function __construct(array $repositories)
+    {
+        $this->repositories = [];
+        foreach ($repositories as $repo) {
+            $this->addRepository($repo);
+        }
+    }
 
+    public function getRepoName(): string
+    {
+        return 'composite repo ('.implode(', ', array_map(static function ($repo): string {
+            return $repo->getRepoName();
+        }, $this->repositories)).')';
+    }
 
+    /**
+     * Returns all the wrapped repositories
+     *
+     * @return RepositoryInterface[]
+     */
+    public function getRepositories(): array
+    {
+        return $this->repositories;
+    }
 
-private $repositories;
+    /**
+     * @inheritDoc
+     */
+    public function hasPackage(PackageInterface $package): bool
+    {
+        foreach ($this->repositories as $repository) {
+            /* @var $repository RepositoryInterface */
+            if ($repository->hasPackage($package)) {
+                return true;
+            }
+        }
 
+        return false;
+    }
 
+    /**
+     * @inheritDoc
+     */
+    public function findPackage($name, $constraint): ?BasePackage
+    {
+        foreach ($this->repositories as $repository) {
+            /* @var $repository RepositoryInterface */
+            $package = $repository->findPackage($name, $constraint);
+            if (null !== $package) {
+                return $package;
+            }
+        }
 
+        return null;
+    }
 
+    /**
+     * @inheritDoc
+     */
+    public function findPackages($name, $constraint = null): array
+    {
+        $packages = [];
+        foreach ($this->repositories as $repository) {
+            /* @var $repository RepositoryInterface */
+            $packages[] = $repository->findPackages($name, $constraint);
+        }
 
-public function __construct(array $repositories)
-{
-$this->repositories = array();
-foreach ($repositories as $repo) {
-$this->addRepository($repo);
-}
-}
+        return $packages ? array_merge(...$packages) : [];
+    }
 
+    /**
+     * @inheritDoc
+     */
+    public function loadPackages(array $packageNameMap, array $acceptableStabilities, array $stabilityFlags, array $alreadyLoaded = []): array
+    {
+        $packages = [];
+        $namesFound = [];
+        foreach ($this->repositories as $repository) {
+            /* @var $repository RepositoryInterface */
+            $result = $repository->loadPackages($packageNameMap, $acceptableStabilities, $stabilityFlags, $alreadyLoaded);
+            $packages[] = $result['packages'];
+            $namesFound[] = $result['namesFound'];
+        }
 
+        return [
+            'packages' => $packages ? array_merge(...$packages) : [],
+            'namesFound' => $namesFound ? array_unique(array_merge(...$namesFound)) : [],
+        ];
+    }
 
+    /**
+     * @inheritDoc
+     */
+    public function search(string $query, int $mode = 0, ?string $type = null): array
+    {
+        $matches = [];
+        foreach ($this->repositories as $repository) {
+            /* @var $repository RepositoryInterface */
+            $matches[] = $repository->search($query, $mode, $type);
+        }
 
+        return \count($matches) > 0 ? array_merge(...$matches) : [];
+    }
 
+    /**
+     * @inheritDoc
+     */
+    public function getPackages(): array
+    {
+        $packages = [];
+        foreach ($this->repositories as $repository) {
+            /* @var $repository RepositoryInterface */
+            $packages[] = $repository->getPackages();
+        }
 
-public function getRepositories()
-{
-return $this->repositories;
-}
+        return $packages ? array_merge(...$packages) : [];
+    }
 
+    /**
+     * @inheritDoc
+     */
+    public function getProviders($packageName): array
+    {
+        $results = [];
+        foreach ($this->repositories as $repository) {
+            /* @var $repository RepositoryInterface */
+            $results[] = $repository->getProviders($packageName);
+        }
 
+        return $results ? array_merge(...$results) : [];
+    }
 
+    public function removePackage(PackageInterface $package): void
+    {
+        foreach ($this->repositories as $repository) {
+            if ($repository instanceof WritableRepositoryInterface) {
+                $repository->removePackage($package);
+            }
+        }
+    }
 
-public function hasPackage(PackageInterface $package)
-{
-foreach ($this->repositories as $repository) {
+    /**
+     * @inheritDoc
+     */
+    public function count(): int
+    {
+        $total = 0;
+        foreach ($this->repositories as $repository) {
+            /* @var $repository RepositoryInterface */
+            $total += $repository->count();
+        }
 
-if ($repository->hasPackage($package)) {
-return true;
-}
-}
+        return $total;
+    }
 
-return false;
-}
-
-
-
-
-public function findPackage($name, $constraint)
-{
-foreach ($this->repositories as $repository) {
-
-$package = $repository->findPackage($name, $constraint);
-if (null !== $package) {
-return $package;
-}
-}
-
-return null;
-}
-
-
-
-
-public function findPackages($name, $constraint = null)
-{
-$packages = array();
-foreach ($this->repositories as $repository) {
-
-$packages[] = $repository->findPackages($name, $constraint);
-}
-
-return $packages ? call_user_func_array('array_merge', $packages) : array();
-}
-
-
-
-
-public function search($query, $mode = 0, $type = null)
-{
-$matches = array();
-foreach ($this->repositories as $repository) {
-
-$matches[] = $repository->search($query, $mode, $type);
-}
-
-return $matches ? call_user_func_array('array_merge', $matches) : array();
-}
-
-
-
-
-public function getPackages()
-{
-$packages = array();
-foreach ($this->repositories as $repository) {
-
-$packages[] = $repository->getPackages();
-}
-
-return $packages ? call_user_func_array('array_merge', $packages) : array();
-}
-
-
-
-
-public function removePackage(PackageInterface $package)
-{
-foreach ($this->repositories as $repository) {
-
-$repository->removePackage($package);
-}
-}
-
-
-
-
-public function count()
-{
-$total = 0;
-foreach ($this->repositories as $repository) {
-
-$total += $repository->count();
-}
-
-return $total;
-}
-
-
-
-
-
-public function addRepository(RepositoryInterface $repository)
-{
-if ($repository instanceof self) {
-foreach ($repository->getRepositories() as $repo) {
-$this->addRepository($repo);
-}
-} else {
-$this->repositories[] = $repository;
-}
-}
+    /**
+     * Add a repository.
+     */
+    public function addRepository(RepositoryInterface $repository): void
+    {
+        if ($repository instanceof self) {
+            foreach ($repository->getRepositories() as $repo) {
+                $this->addRepository($repo);
+            }
+        } else {
+            $this->repositories[] = $repository;
+        }
+    }
 }

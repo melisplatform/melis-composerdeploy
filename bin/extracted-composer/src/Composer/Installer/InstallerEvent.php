@@ -1,161 +1,85 @@
-<?php
+<?php declare(strict_types=1);
 
-
-
-
-
-
-
-
-
-
+/*
+ * This file is part of Composer.
+ *
+ * (c) Nils Adermann <naderman@naderman.de>
+ *     Jordi Boggiano <j.boggiano@seld.be>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
 
 namespace Composer\Installer;
 
 use Composer\Composer;
-use Composer\DependencyResolver\PolicyInterface;
-use Composer\DependencyResolver\Operation\OperationInterface;
-use Composer\DependencyResolver\Pool;
-use Composer\DependencyResolver\Request;
+use Composer\DependencyResolver\Transaction;
 use Composer\EventDispatcher\Event;
 use Composer\IO\IOInterface;
-use Composer\Repository\CompositeRepository;
-
-
-
-
-
 
 class InstallerEvent extends Event
 {
-
-
-
-private $composer;
-
-
-
-
-private $io;
-
-
-
-
-private $devMode;
-
-
-
-
-private $policy;
-
-
-
-
-private $pool;
-
-
-
-
-private $installedRepo;
-
-
-
-
-private $request;
-
-
-
-
-private $operations;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-public function __construct($eventName, Composer $composer, IOInterface $io, $devMode, PolicyInterface $policy, Pool $pool, CompositeRepository $installedRepo, Request $request, array $operations = array())
-{
-parent::__construct($eventName);
-
-$this->composer = $composer;
-$this->io = $io;
-$this->devMode = $devMode;
-$this->policy = $policy;
-$this->pool = $pool;
-$this->installedRepo = $installedRepo;
-$this->request = $request;
-$this->operations = $operations;
-}
-
-
-
-
-public function getComposer()
-{
-return $this->composer;
-}
-
-
-
-
-public function getIO()
-{
-return $this->io;
-}
-
-
-
-
-public function isDevMode()
-{
-return $this->devMode;
-}
-
-
-
-
-public function getPolicy()
-{
-return $this->policy;
-}
-
-
-
-
-public function getPool()
-{
-return $this->pool;
-}
-
-
-
-
-public function getInstalledRepo()
-{
-return $this->installedRepo;
-}
-
-
-
-
-public function getRequest()
-{
-return $this->request;
-}
-
-
-
-
-public function getOperations()
-{
-return $this->operations;
-}
+    /**
+     * @var Composer
+     */
+    private $composer;
+
+    /**
+     * @var IOInterface
+     */
+    private $io;
+
+    /**
+     * @var bool
+     */
+    private $devMode;
+
+    /**
+     * @var bool
+     */
+    private $executeOperations;
+
+    /**
+     * @var Transaction
+     */
+    private $transaction;
+
+    /**
+     * Constructor.
+     */
+    public function __construct(string $eventName, Composer $composer, IOInterface $io, bool $devMode, bool $executeOperations, Transaction $transaction)
+    {
+        parent::__construct($eventName);
+
+        $this->composer = $composer;
+        $this->io = $io;
+        $this->devMode = $devMode;
+        $this->executeOperations = $executeOperations;
+        $this->transaction = $transaction;
+    }
+
+    public function getComposer(): Composer
+    {
+        return $this->composer;
+    }
+
+    public function getIO(): IOInterface
+    {
+        return $this->io;
+    }
+
+    public function isDevMode(): bool
+    {
+        return $this->devMode;
+    }
+
+    public function isExecutingOperations(): bool
+    {
+        return $this->executeOperations;
+    }
+
+    public function getTransaction(): ?Transaction
+    {
+        return $this->transaction;
+    }
 }

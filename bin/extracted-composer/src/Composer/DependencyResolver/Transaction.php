@@ -1,244 +1,357 @@
-<?php
+<?php declare(strict_types=1);
 
-
-
-
-
-
-
-
-
-
+/*
+ * This file is part of Composer.
+ *
+ * (c) Nils Adermann <naderman@naderman.de>
+ *     Jordi Boggiano <j.boggiano@seld.be>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
 
 namespace Composer\DependencyResolver;
 
 use Composer\Package\AliasPackage;
+use Composer\Package\Link;
+use Composer\Package\PackageInterface;
+use Composer\Repository\PlatformRepository;
+use Composer\DependencyResolver\Operation\OperationInterface;
 
-
-
-
+/**
+ * @author Nils Adermann <naderman@naderman.de>
+ * @internal
+ */
 class Transaction
 {
-protected $policy;
-protected $pool;
-protected $installedMap;
-protected $decisions;
-protected $transaction;
+    /**
+     * @var OperationInterface[]
+     */
+    protected $operations;
 
-public function __construct($policy, $pool, $installedMap, $decisions)
-{
-$this->policy = $policy;
-$this->pool = $pool;
-$this->installedMap = $installedMap;
-$this->decisions = $decisions;
-$this->transaction = array();
-}
+    /**
+     * Packages present at the beginning of the transaction
+     * @var PackageInterface[]
+     */
+    protected $presentPackages;
 
-public function getOperations()
-{
-$installMeansUpdateMap = $this->findUpdates();
+    /**
+     * Package set resulting from this transaction
+     * @var array<string, PackageInterface>
+     */
+    protected $resultPackageMap;
 
-$updateMap = array();
-$installMap = array();
-$uninstallMap = array();
+    /**
+     * @var array<string, PackageInterface[]>
+     */
+    protected $resultPackagesByName = [];
 
-foreach ($this->decisions as $i => $decision) {
-$literal = $decision[Decisions::DECISION_LITERAL];
-$reason = $decision[Decisions::DECISION_REASON];
+    /**
+     * @param PackageInterface[] $presentPackages
+     * @param PackageInterface[] $resultPackages
+     */
+    public function __construct(array $presentPackages, array $resultPackages)
+    {
+        $this->presentPackages = $presentPackages;
+        $this->setResultPackageMaps($resultPackages);
+        $this->operations = $this->calculateOperations();
+    }
 
-$package = $this->pool->literalToPackage($literal);
+    /**
+     * @return OperationInterface[]
+     */
+    public function getOperations(): array
+    {
+        return $this->operations;
+    }
 
+    /**
+     * @param PackageInterface[] $resultPackages
+     */
+    private function setResultPackageMaps(array $resultPackages): void
+    {
+        $packageSort = static function (PackageInterface $a, PackageInterface $b): int {
+            // sort alias packages by the same name behind their non alias version
+            if ($a->getName() === $b->getName()) {
+                if ($a instanceof AliasPackage !== $b instanceof AliasPackage) {
+                    return $a instanceof AliasPackage ? -1 : 1;
+                }
+                // if names are the same, compare version, e.g. to sort aliases reliably, actual order does not matter
+                return strcmp($b->getVersion(), $a->getVersion());
+            }
 
- if (($literal > 0) == (isset($this->installedMap[$package->id]))) {
-continue;
-}
+            return strcmp($b->getName(), $a->getName());
+        };
 
-if ($literal > 0) {
-if (isset($installMeansUpdateMap[abs($literal)]) && !$package instanceof AliasPackage) {
-$source = $installMeansUpdateMap[abs($literal)];
+        $this->resultPackageMap = [];
+        foreach ($resultPackages as $package) {
+            $this->resultPackageMap[spl_object_hash($package)] = $package;
+            foreach ($package->getNames() as $name) {
+                $this->resultPackagesByName[$name][] = $package;
+            }
+        }
 
-$updateMap[$package->id] = array(
-'package' => $package,
-'source' => $source,
-'reason' => $reason,
-);
+        uasort($this->resultPackageMap, $packageSort);
+        foreach ($this->resultPackagesByName as $name => $packages) {
+            uasort($this->resultPackagesByName[$name], $packageSort);
+        }
+    }
 
+    /**
+     * @return OperationInterface[]
+     */
+    protected function calculateOperations(): array
+    {
+        $operations = [];
 
- unset($installMeansUpdateMap[abs($literal)]);
-$ignoreRemove[$source->id] = true;
-} else {
-$installMap[$package->id] = array(
-'package' => $package,
-'reason' => $reason,
-);
-}
-}
-}
+        $presentPackageMap = [];
+        $removeMap = [];
+        $presentAliasMap = [];
+        $removeAliasMap = [];
+        foreach ($this->presentPackages as $package) {
+            if ($package instanceof AliasPackage) {
+                $presentAliasMap[$package->getName().'::'.$package->getVersion()] = $package;
+                $removeAliasMap[$package->getName().'::'.$package->getVersion()] = $package;
+            } else {
+                $presentPackageMap[$package->getName()] = $package;
+                $removeMap[$package->getName()] = $package;
+            }
+        }
 
-foreach ($this->decisions as $i => $decision) {
-$literal = $decision[Decisions::DECISION_LITERAL];
-$reason = $decision[Decisions::DECISION_REASON];
-$package = $this->pool->literalToPackage($literal);
+        $stack = $this->getRootPackages();
 
-if ($literal <= 0 &&
-isset($this->installedMap[$package->id]) &&
-!isset($ignoreRemove[$package->id])) {
-$uninstallMap[$package->id] = array(
-'package' => $package,
-'reason' => $reason,
-);
-}
-}
+        $visited = [];
+        $processed = [];
 
-$this->transactionFromMaps($installMap, $updateMap, $uninstallMap);
+        while (!empty($stack)) {
+            $package = array_pop($stack);
 
-return $this->transaction;
-}
+            if (isset($processed[spl_object_hash($package)])) {
+                continue;
+            }
 
-protected function transactionFromMaps($installMap, $updateMap, $uninstallMap)
-{
-$queue = array_map(
-function ($operation) {
-return $operation['package'];
-},
-$this->findRootPackages($installMap, $updateMap)
-);
+            if (!isset($visited[spl_object_hash($package)])) {
+                $visited[spl_object_hash($package)] = true;
 
-$visited = array();
+                $stack[] = $package;
+                if ($package instanceof AliasPackage) {
+                    $stack[] = $package->getAliasOf();
+                } else {
+                    foreach ($package->getRequires() as $link) {
+                        $possibleRequires = $this->getProvidersInResult($link);
 
-while (!empty($queue)) {
-$package = array_pop($queue);
-$packageId = $package->id;
+                        foreach ($possibleRequires as $require) {
+                            $stack[] = $require;
+                        }
+                    }
+                }
+            } elseif (!isset($processed[spl_object_hash($package)])) {
+                $processed[spl_object_hash($package)] = true;
 
-if (!isset($visited[$packageId])) {
-array_push($queue, $package);
+                if ($package instanceof AliasPackage) {
+                    $aliasKey = $package->getName().'::'.$package->getVersion();
+                    if (isset($presentAliasMap[$aliasKey])) {
+                        unset($removeAliasMap[$aliasKey]);
+                    } else {
+                        $operations[] = new Operation\MarkAliasInstalledOperation($package);
+                    }
+                } else {
+                    if (isset($presentPackageMap[$package->getName()])) {
+                        $source = $presentPackageMap[$package->getName()];
 
-if ($package instanceof AliasPackage) {
-array_push($queue, $package->getAliasOf());
-} else {
-foreach ($package->getRequires() as $link) {
-$possibleRequires = $this->pool->whatProvides($link->getTarget(), $link->getConstraint());
+                        // do we need to update?
+                        // TODO different for lock?
+                        if ($package->getVersion() !== $presentPackageMap[$package->getName()]->getVersion() ||
+                            $package->getDistReference() !== $presentPackageMap[$package->getName()]->getDistReference() ||
+                            $package->getSourceReference() !== $presentPackageMap[$package->getName()]->getSourceReference()
+                        ) {
+                            $operations[] = new Operation\UpdateOperation($source, $package);
+                        }
+                        unset($removeMap[$package->getName()]);
+                    } else {
+                        $operations[] = new Operation\InstallOperation($package);
+                        unset($removeMap[$package->getName()]);
+                    }
+                }
+            }
+        }
 
-foreach ($possibleRequires as $require) {
-array_push($queue, $require);
-}
-}
-}
+        foreach ($removeMap as $name => $package) {
+            array_unshift($operations, new Operation\UninstallOperation($package));
+        }
+        foreach ($removeAliasMap as $nameVersion => $package) {
+            $operations[] = new Operation\MarkAliasUninstalledOperation($package);
+        }
 
-$visited[$package->id] = true;
-} else {
-if (isset($installMap[$packageId])) {
-$this->install(
-$installMap[$packageId]['package'],
-$installMap[$packageId]['reason']
-);
-unset($installMap[$packageId]);
-}
-if (isset($updateMap[$packageId])) {
-$this->update(
-$updateMap[$packageId]['source'],
-$updateMap[$packageId]['package'],
-$updateMap[$packageId]['reason']
-);
-unset($updateMap[$packageId]);
-}
-}
-}
+        $operations = $this->movePluginsToFront($operations);
+        // TODO fix this:
+        // we have to do this again here even though the above stack code did it because moving plugins moves them before uninstalls
+        $operations = $this->moveUninstallsToFront($operations);
 
-foreach ($uninstallMap as $uninstall) {
-$this->uninstall($uninstall['package'], $uninstall['reason']);
-}
-}
+        // TODO skip updates which don't update? is this needed? we shouldn't schedule this update in the first place?
+        /*
+        if ('update' === $opType) {
+            $targetPackage = $operation->getTargetPackage();
+            if ($targetPackage->isDev()) {
+                $initialPackage = $operation->getInitialPackage();
+                if ($targetPackage->getVersion() === $initialPackage->getVersion()
+                    && (!$targetPackage->getSourceReference() || $targetPackage->getSourceReference() === $initialPackage->getSourceReference())
+                    && (!$targetPackage->getDistReference() || $targetPackage->getDistReference() === $initialPackage->getDistReference())
+                ) {
+                    $this->io->writeError('  - Skipping update of ' . $targetPackage->getPrettyName() . ' to the same reference-locked version', true, IOInterface::DEBUG);
+                    $this->io->writeError('', true, IOInterface::DEBUG);
 
-protected function findRootPackages($installMap, $updateMap)
-{
-$packages = $installMap + $updateMap;
-$roots = $packages;
+                    continue;
+                }
+            }
+        }*/
 
-foreach ($packages as $packageId => $operation) {
-$package = $operation['package'];
+        return $this->operations = $operations;
+    }
 
-if (!isset($roots[$packageId])) {
-continue;
-}
+    /**
+     * Determine which packages in the result are not required by any other packages in it.
+     *
+     * These serve as a starting point to enumerate packages in a topological order despite potential cycles.
+     * If there are packages with a cycle on the top level the package with the lowest name gets picked
+     *
+     * @return array<string, PackageInterface>
+     */
+    protected function getRootPackages(): array
+    {
+        $roots = $this->resultPackageMap;
 
-foreach ($package->getRequires() as $link) {
-$possibleRequires = $this->pool->whatProvides($link->getTarget(), $link->getConstraint());
+        foreach ($this->resultPackageMap as $packageHash => $package) {
+            if (!isset($roots[$packageHash])) {
+                continue;
+            }
 
-foreach ($possibleRequires as $require) {
-if ($require !== $package) {
-unset($roots[$require->id]);
-}
-}
-}
-}
+            foreach ($package->getRequires() as $link) {
+                $possibleRequires = $this->getProvidersInResult($link);
 
-return $roots;
-}
+                foreach ($possibleRequires as $require) {
+                    if ($require !== $package) {
+                        unset($roots[spl_object_hash($require)]);
+                    }
+                }
+            }
+        }
 
-protected function findUpdates()
-{
-$installMeansUpdateMap = array();
+        return $roots;
+    }
 
-foreach ($this->decisions as $i => $decision) {
-$literal = $decision[Decisions::DECISION_LITERAL];
-$package = $this->pool->literalToPackage($literal);
+    /**
+     * @return PackageInterface[]
+     */
+    protected function getProvidersInResult(Link $link): array
+    {
+        if (!isset($this->resultPackagesByName[$link->getTarget()])) {
+            return [];
+        }
 
-if ($package instanceof AliasPackage) {
-continue;
-}
+        return $this->resultPackagesByName[$link->getTarget()];
+    }
 
+    /**
+     * Workaround: if your packages depend on plugins, we must be sure
+     * that those are installed / updated first; else it would lead to packages
+     * being installed multiple times in different folders, when running Composer
+     * twice.
+     *
+     * While this does not fix the root-causes of https://github.com/composer/composer/issues/1147,
+     * it at least fixes the symptoms and makes usage of composer possible (again)
+     * in such scenarios.
+     *
+     * @param  OperationInterface[] $operations
+     * @return OperationInterface[] reordered operation list
+     */
+    private function movePluginsToFront(array $operations): array
+    {
+        $dlModifyingPluginsNoDeps = [];
+        $dlModifyingPluginsWithDeps = [];
+        $dlModifyingPluginRequires = [];
+        $pluginsNoDeps = [];
+        $pluginsWithDeps = [];
+        $pluginRequires = [];
 
- if ($literal <= 0 && isset($this->installedMap[$package->id])) {
-$updates = $this->policy->findUpdatePackages($this->pool, $this->installedMap, $package);
+        foreach (array_reverse($operations, true) as $idx => $op) {
+            if ($op instanceof Operation\InstallOperation) {
+                $package = $op->getPackage();
+            } elseif ($op instanceof Operation\UpdateOperation) {
+                $package = $op->getTargetPackage();
+            } else {
+                continue;
+            }
 
-$literals = array($package->id);
+            $isDownloadsModifyingPlugin = $package->getType() === 'composer-plugin' && ($extra = $package->getExtra()) && isset($extra['plugin-modifies-downloads']) && $extra['plugin-modifies-downloads'] === true;
 
-foreach ($updates as $update) {
-$literals[] = $update->id;
-}
+            // is this a downloads modifying plugin or a dependency of one?
+            if ($isDownloadsModifyingPlugin || count(array_intersect($package->getNames(), $dlModifyingPluginRequires))) {
+                // get the package's requires, but filter out any platform requirements
+                $requires = array_filter(array_keys($package->getRequires()), static function ($req): bool {
+                    return !PlatformRepository::isPlatformPackage($req);
+                });
 
-foreach ($literals as $updateLiteral) {
-if ($updateLiteral !== $literal) {
-$installMeansUpdateMap[abs($updateLiteral)] = $package;
-}
-}
-}
-}
+                // is this a plugin with no meaningful dependencies?
+                if ($isDownloadsModifyingPlugin && !count($requires)) {
+                    // plugins with no dependencies go to the very front
+                    array_unshift($dlModifyingPluginsNoDeps, $op);
+                } else {
+                    // capture the requirements for this package so those packages will be moved up as well
+                    $dlModifyingPluginRequires = array_merge($dlModifyingPluginRequires, $requires);
+                    // move the operation to the front
+                    array_unshift($dlModifyingPluginsWithDeps, $op);
+                }
 
-return $installMeansUpdateMap;
-}
+                unset($operations[$idx]);
+                continue;
+            }
 
-protected function install($package, $reason)
-{
-if ($package instanceof AliasPackage) {
-return $this->markAliasInstalled($package, $reason);
-}
+            // is this package a plugin?
+            $isPlugin = $package->getType() === 'composer-plugin' || $package->getType() === 'composer-installer';
 
-$this->transaction[] = new Operation\InstallOperation($package, $reason);
-}
+            // is this a plugin or a dependency of a plugin?
+            if ($isPlugin || count(array_intersect($package->getNames(), $pluginRequires))) {
+                // get the package's requires, but filter out any platform requirements
+                $requires = array_filter(array_keys($package->getRequires()), static function ($req): bool {
+                    return !PlatformRepository::isPlatformPackage($req);
+                });
 
-protected function update($from, $to, $reason)
-{
-$this->transaction[] = new Operation\UpdateOperation($from, $to, $reason);
-}
+                // is this a plugin with no meaningful dependencies?
+                if ($isPlugin && !count($requires)) {
+                    // plugins with no dependencies go to the very front
+                    array_unshift($pluginsNoDeps, $op);
+                } else {
+                    // capture the requirements for this package so those packages will be moved up as well
+                    $pluginRequires = array_merge($pluginRequires, $requires);
+                    // move the operation to the front
+                    array_unshift($pluginsWithDeps, $op);
+                }
 
-protected function uninstall($package, $reason)
-{
-if ($package instanceof AliasPackage) {
-return $this->markAliasUninstalled($package, $reason);
-}
+                unset($operations[$idx]);
+            }
+        }
 
-$this->transaction[] = new Operation\UninstallOperation($package, $reason);
-}
+        return array_merge($dlModifyingPluginsNoDeps, $dlModifyingPluginsWithDeps, $pluginsNoDeps, $pluginsWithDeps, $operations);
+    }
 
-protected function markAliasInstalled($package, $reason)
-{
-$this->transaction[] = new Operation\MarkAliasInstalledOperation($package, $reason);
-}
+    /**
+     * Removals of packages should be executed before installations in
+     * case two packages resolve to the same path (due to custom installers)
+     *
+     * @param  OperationInterface[] $operations
+     * @return OperationInterface[] reordered operation list
+     */
+    private function moveUninstallsToFront(array $operations): array
+    {
+        $uninstOps = [];
+        foreach ($operations as $idx => $op) {
+            if ($op instanceof Operation\UninstallOperation || $op instanceof Operation\MarkAliasUninstalledOperation) {
+                $uninstOps[] = $op;
+                unset($operations[$idx]);
+            }
+        }
 
-protected function markAliasUninstalled($package, $reason)
-{
-$this->transaction[] = new Operation\MarkAliasUninstalledOperation($package, $reason);
-}
+        return array_merge($uninstOps, $operations);
+    }
 }
