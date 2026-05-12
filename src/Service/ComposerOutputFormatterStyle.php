@@ -32,7 +32,7 @@ class ComposerOutputFormatterStyle implements OutputFormatterStyleInterface
      *
      * @param string $color The color name
      */
-    public function setForeground(?string $color = null)
+    public function setForeground(?string $color = null): void
     {
         $this->foreground = $color;
     }
@@ -42,7 +42,7 @@ class ComposerOutputFormatterStyle implements OutputFormatterStyleInterface
      *
      * @param string $color The color name
      */
-    public function setBackground(?string $color = null)
+    public function setBackground(?string $color = null): void
     {
         $this->background = $color;
     }
@@ -52,7 +52,7 @@ class ComposerOutputFormatterStyle implements OutputFormatterStyleInterface
      *
      * @param string $option The option name
      */
-    public function setOption(string $option)
+    public function setOption(string $option): void
     {
         return;
     }
@@ -62,7 +62,7 @@ class ComposerOutputFormatterStyle implements OutputFormatterStyleInterface
      *
      * @param string $option The option name
      */
-    public function unsetOption(string $option)
+    public function unsetOption(string $option): void
     {
         return;
     }
@@ -71,7 +71,7 @@ class ComposerOutputFormatterStyle implements OutputFormatterStyleInterface
      * Sets multiple style options at once.
      * @param array $options
      */
-    public function setOptions(array $options)
+    public function setOptions(array $options): void
     {
         return;
     }
@@ -88,13 +88,13 @@ class ComposerOutputFormatterStyle implements OutputFormatterStyleInterface
         $foreground = null;
         $background = null;
 
-        if($this->foreground)
+        if ($this->foreground)
             $foreground = 'color: ' . $this->foreground . ';';
 
-        if($this->background)
+        if ($this->background)
             $background = 'background: ' . $this->background . ';';
 
-        $dom = '<span style="'.$foreground.$background.'">' . $text . '</span>';
+        $dom = '<span style="' . $foreground . $background . '">' . $text . '</span>';
 
         return $dom;
     }
