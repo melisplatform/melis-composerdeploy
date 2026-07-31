@@ -68,9 +68,54 @@ class MelisComposerService extends MelisServiceManager
             $this->setDryRun(true);
         }
 
-        $package = !empty($version) ? $package . ':' . $version : $package;
+        $package = $this->buildPackageArg($package, $version);
 
         return $this->runCommand(self::UPDATE, $package, self::ROOT_REQS . self::DEFAULT_ARGS);
+    }
+
+    /**
+     * Validates and assembles the "package[:version]" argument that is passed
+     * to composer.
+     *
+     * Both $package and $version are interpolated into the command string that
+     * is handed to Symfony's StringInput (which tokenizes on whitespace), so an
+     * attacker-controlled value containing spaces could inject additional
+     * composer arguments/options. We therefore reject anything that does not
+     * strictly match a Composer package name (and, if given, a semver-ish
+     * version constraint).
+     *
+     * @param string      $package
+     * @param string|null $version
+     *
+     * @return string
+     * @throws \InvalidArgumentException
+     */
+    private function buildPackageArg($package, $version = null)
+    {
+        if (!is_string($package) || $package === '') {
+            throw new \InvalidArgumentException('Invalid composer package name.');
+        }
+
+        // vendor/name, optionally followed by :constraint
+        $packageRegex = '/^[a-z0-9]([a-z0-9._-]*)\/[a-z0-9]([a-z0-9._-]*)(:[\w.*<>=~^|-]+)?$/';
+        if (preg_match('/\s/', $package) || !preg_match($packageRegex, $package)) {
+            throw new \InvalidArgumentException('Invalid composer package name: ' . $package);
+        }
+
+        if (!empty($version)) {
+            // semver-ish constraint: digits, dots, wildcards and range operators
+            $versionRegex = '/^[\w.*<>=~^|\- ]+$/';
+            if (preg_match('/\s/', trim($version)) || !preg_match($versionRegex, $version)) {
+                throw new \InvalidArgumentException('Invalid composer version constraint: ' . $version);
+            }
+
+            // if the package already embeds a constraint, do not append another
+            if (strpos($package, ':') === false) {
+                $package = $package . ':' . $version;
+            }
+        }
+
+        return $package;
     }
 
     /**
@@ -232,7 +277,7 @@ class MelisComposerService extends MelisServiceManager
      */
     public function download($package, $version = null, $noInstall = false)
     {
-        $package = !empty($version) ? $package . ':' . $version : $package;
+        $package = $this->buildPackageArg($package, $version);
 
         $args = $noInstall === true ? self::NO_PROGRESS . self::NO_UPDATE . self::DEFAULT_ARGS : self::DEFAULT_ARGS;
 
@@ -259,6 +304,8 @@ class MelisComposerService extends MelisServiceManager
      */
     public function remove($package)
     {
+        $package = $this->buildPackageArg($package);
+
         $output = $this->runCommand(self::REMOVE, $package, self::REMOVE_ARGS);
 
         if (!$output) {
