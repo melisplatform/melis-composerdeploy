@@ -98,9 +98,33 @@ class MelisComposerService extends MelisServiceManager
 
         // vendor/name, optionally followed by :constraint
         $packageRegex = '/^[a-z0-9]([a-z0-9._-]*)\/[a-z0-9]([a-z0-9._-]*)(:[\w.*<>=~^|-]+)?$/';
-        if (preg_match('/\s/', $package) || !preg_match($packageRegex, $package)) {
-            throw new \InvalidArgumentException('Invalid composer package name: ' . $package);
+        // Callers may legitimately pass a whitespace-separated LIST of packages:
+        // MelisInstaller does exactly that (implode(' ', $downloadableModules)) when the
+        // setup wizard downloads the modules the user picked. Validate every token
+        // individually — the injection guard still holds, because nothing but a
+        // well-formed package name can survive the check below.
+        $packages = preg_split('/\s+/', trim($package), -1, PREG_SPLIT_NO_EMPTY);
+        if (empty($packages)) {
+            throw new \InvalidArgumentException('Invalid composer package name.');
         }
+
+        foreach ($packages as $singlePackage) {
+            if (!preg_match($packageRegex, $singlePackage)) {
+                throw new \InvalidArgumentException('Invalid composer package name: ' . $singlePackage);
+            }
+        }
+
+        if (count($packages) > 1) {
+            if (!empty($version)) {
+                throw new \InvalidArgumentException(
+                    'A version constraint cannot be combined with several packages.'
+                );
+            }
+
+            return implode(' ', $packages);
+        }
+
+        $package = $packages[0];
 
         if (!empty($version)) {
             // semver-ish constraint: digits, dots, wildcards and range operators
