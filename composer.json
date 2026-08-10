@@ -6,12 +6,21 @@
 	"homepage": "https://github.com/melisplatform/melis-composerdeploy",
 	"support": {
 		"source": "https://github.com/melisplatform/melis-composerdeploy",
-		"issues": "https://github.com/melisplatform/melis-composerdeploy/issues"
+		"issues": "https://github.com/melisplatform/melis-composerdeploy/issues",
+		"docs": "https://melisplatform.github.io/docs/"
 	},
+	"authors": [
+		{
+			"name": "Melis Technology",
+			"email": "contact@melistechnology.com",
+			"homepage": "https://www.melisplatform.com/",
+			"role": "Developer"
+		}
+	],
 	"keywords": [
 		"cms",
 		"melis",
-		"zf2",
+		"laminas",
 		"module"
 	],
 	"extra": {
@@ -19,7 +28,7 @@
 		"dbdeploy": true
 	},
 	"require": {
-		"php": "^8.1|^8.3",
+		"php": "^8.3|^8.5",
 		"composer/composer": "^2.9.6"
 	},
 	"autoload": {
