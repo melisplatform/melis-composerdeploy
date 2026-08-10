@@ -68,7 +68,12 @@ class MelisComposerService extends MelisServiceManager
             $this->setDryRun(true);
         }
 
-        $package = $this->buildPackageArg($package, $version);
+        // No package means "update everything" — `composer update --root-reqs`, which
+        // is what MelisInstaller's downloadModules step calls (update() with no args).
+        // Only validate when a package was actually requested.
+        $package = ($package === null || $package === '')
+            ? null
+            : $this->buildPackageArg($package, $version);
 
         return $this->runCommand(self::UPDATE, $package, self::ROOT_REQS . self::DEFAULT_ARGS);
     }
