@@ -306,6 +306,17 @@ class MelisComposerService extends MelisServiceManager
      */
     public function download($package, $version = null, $noInstall = false)
     {
+        // Nothing to require is a no-op, not an invalid package name. MelisInstaller's
+        // addModulesToComposer step calls download(implode(' ', $modules)) and that list
+        // is legitimately EMPTY when the wizard's "Melis Core only" option is picked
+        // (module_auto_install ships empty by design), so validating it would 500 the
+        // Installation step on a perfectly valid choice. `composer require` with no
+        // package is not the same thing as update()'s "everything" — it would prompt —
+        // so return before running anything at all.
+        if ($package === null || trim((string) $package) === '') {
+            return '';
+        }
+
         $package = $this->buildPackageArg($package, $version);
 
         $args = $noInstall === true ? self::NO_PROGRESS . self::NO_UPDATE . self::DEFAULT_ARGS : self::DEFAULT_ARGS;
