@@ -88,19 +88,26 @@ class MelisComposer
      */
     public function getInstalledPackages()
     {
-        if (!$this->packages) {
+        // PERF/SECURITY (audit AM-M6): cache the parsed installed.json across ALL instances.
+        // MelisModulesService creates a fresh MelisComposer on nearly every call, so the former
+        // per-instance ($this->packages) cache never helped — installed.json (~300 KB) was
+        // re-read and re-decoded several times PER asset request (dozens per page). A process-wide
+        // static makes it read-and-decode once per request.
+        static $cache = null;
 
+        if ($cache === null) {
             $docRoot = $_SERVER['DOCUMENT_ROOT'] ? $_SERVER['DOCUMENT_ROOT'].'/../' : './';
 
             $installedPackagesJson = $docRoot.'vendor/composer/installed.json';
-            $this->packages = (array) \Laminas\Json\Json::decode(file_get_contents($installedPackagesJson));
+            $cache = (array) \Laminas\Json\Json::decode(file_get_contents($installedPackagesJson));
 
             // forward compatibility for composer v2 installed.json
-            if (isset($this->packages['packages'])) {
-                $this->packages = $this->packages['packages'];
+            if (isset($cache['packages'])) {
+                $cache = $cache['packages'];
             }
-
         }
+
+        $this->packages = $cache;
 
         return $this->packages;
     }
