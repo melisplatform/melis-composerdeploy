@@ -11,6 +11,7 @@ namespace MelisComposerDeploy\Service;
 
 use Composer\Console\Application;
 use Laminas\ServiceManager\ServiceManager;
+use MelisComposerDeploy\MelisComposer;
 use MelisCore\Service\MelisServiceManager;
 use Symfony\Component\Console\Input\StringInput;
 use Symfony\Component\Console\Output\StreamOutput;
@@ -20,7 +21,6 @@ use Symfony\Component\Console\Output\StreamOutput;
  */
 class MelisComposerService extends MelisServiceManager
 {
-    const COMPOSER = __DIR__ . '/../../bin/extracted-composer/composer';
     const INSTALL = 'install';
     const UPDATE = 'update';
     const REMOVE = 'remove';
@@ -51,6 +51,13 @@ class MelisComposerService extends MelisServiceManager
      * @var boolean
      */
     protected $isDryRun;
+
+    /**
+     * Exit code of the last composer run (0 = success), null before any run
+     *
+     * @var int|null
+     */
+    protected $lastExitCode;
 
     /**
      * Executes a $ composer update command
@@ -170,13 +177,18 @@ class MelisComposerService extends MelisServiceManager
      */
     private function runCommand($cmd, $package, $args, $noAddtlArguments = false)
     {
-        $translator = $this->getServiceManager()->get('translator');
         $docPath = str_replace(['\\', 'public/../'], '', $this->getDocumentRoot());
         $docPath = trim(substr($docPath, 0, strlen($docPath) - 1)); // remove last "/" trail
 
         set_time_limit(0);
-        ini_set('memory_limit', -1);       
-        putenv('COMPOSER_HOME=' . self::COMPOSER);
+        ini_set('memory_limit', -1);
+        // SECURITY (audit CD-M3): this used to force COMPOSER_HOME into the package's
+        // own bin/ directory (a path that does not even exist in the shipped module):
+        // the shared warm cache was bypassed and config.json/auth.json ended up inside
+        // vendor/, wiped on every module update and sitting in a git-tracked tree.
+        // Respect the environment instead, with the same private fallback as
+        // MelisComposer (never the shared /tmp).
+        MelisComposer::ensureComposerHome();
 
         if (in_array($cmd, $this->availableCommands())) {
 
@@ -185,6 +197,9 @@ class MelisComposerService extends MelisServiceManager
             if ($this->getDryRun()) {
                 $dryRunArgs = self::DRY_RUN_ARGS;
             }
+            // CD-M5: consume the flag — it used to stay on for the rest of the request,
+            // silently turning every later real run into a dry run.
+            $this->setDryRun(false);
 
             $noProgress = self::NO_PROGRESS;
             $ignoreReqs = self::IGNORE_REQ;
@@ -199,7 +214,10 @@ class MelisComposerService extends MelisServiceManager
                     $commandString = "$cmd --working-dir=\"$docPath\"";
                 }
             }else
-                $commandString = "$cmd $package $ignoreReqs $noScript";
+                // CD-M5: align the remove branch with the others — honour $args
+                // (REMOVE_ARGS was silently dropped), pin the working dir instead of
+                // relying on the chdir() below, and never allow an interactive prompt.
+                $commandString = "$cmd $package $dryRunArgs $args $ignoreReqs $noScript --no-interaction --working-dir=\"$docPath\"";
 
             $input = new StringInput($commandString);
             $output = new StreamOutput(fopen('php://output', 'w'));
@@ -215,19 +233,28 @@ class MelisComposerService extends MelisServiceManager
 
             chdir($docPath);
 
-            if (PHP_OS !== 'AIX' && DIRECTORY_SEPARATOR == '/') {
-                /** proc_open(): fork failed - Cannot allocate memory [fix] | linux only */
-                shell_exec('sudo /bin/dd if=/dev/zero of=/var/swap.1 bs=1M count=1024');
-                shell_exec('sudo /sbin/mkswap /var/swap.1');
-                shell_exec('sudo /sbin/swapon /var/swap.1');
-            }
-
-            $composer->run($input, $output);
+            // CD-M5: without this, Symfony's Application::run() ends with exit($code),
+            // killing the PHP request as soon as composer finishes — every caller's
+            // post-run code was dead and no failure was ever observable (gotcha 8).
+            $composer->setAutoExit(false);
+            $this->lastExitCode = $composer->run($input, $output);
 
             return $output;
         }
 
+        $translator = $this->getServiceManager()->get('translator');
+
         return sprintf($translator->translate('tr_market_place_unknown_command'), $cmd);
+    }
+
+    /**
+     * Exit code of the last composer run (0 = success), null before any run
+     *
+     * @return int|null
+     */
+    public function getLastExitCode()
+    {
+        return $this->lastExitCode;
     }
 
     /**
@@ -346,13 +373,12 @@ class MelisComposerService extends MelisServiceManager
     {
         $package = $this->buildPackageArg($package);
 
-        $output = $this->runCommand(self::REMOVE, $package, self::REMOVE_ARGS);
+        $this->runCommand(self::REMOVE, $package, self::REMOVE_ARGS);
 
-        if (!$output) {
-            return true;
-        }
-
-        return false;
+        // CD-M5: the old `!$output` test compared an always-truthy StreamOutput, so
+        // this reported failure even when composer succeeded (and was unreachable
+        // anyway while run() still exit()ed the request). Report the real outcome.
+        return $this->getLastExitCode() === 0;
     }
 
 }
