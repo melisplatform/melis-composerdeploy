@@ -136,8 +136,8 @@ Notes derived from source:
 - **Allowed commands only** (`availableCommands()`): `install`, `update`, `dump-autoload`,
   `require`, `remove`. Anything else returns a "unknown command" translation.
 - **Argument hardening** (`buildPackageArg()`): the `package[:version]` string is validated
-  against a strict `vendor/name` + semver-ish constraint regex and rejects whitespace, to prevent
-  argument injection into the Composer command line.
+  against a strict `vendor/name` + semver-ish constraint regex and rejects whitespace, so each
+  value stays a single Composer argument.
 - Commands run with `--ignore-platform-reqs --no-progress --no-scripts --prefer-dist` and
   `--working-dir=<docRoot>`; `remove` runs `--no-scripts` only.
 - No routes, no controller, no events, no view — it is a service invoked by other modules.
