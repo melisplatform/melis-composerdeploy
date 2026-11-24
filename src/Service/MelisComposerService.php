@@ -179,12 +179,8 @@ class MelisComposerService extends MelisServiceManager
 
         set_time_limit(0);
         ini_set('memory_limit', -1);
-        // SECURITY (audit CD-M3): this used to force COMPOSER_HOME into the package's
-        // own bin/ directory (a path that does not even exist in the shipped module):
-        // the shared warm cache was bypassed and config.json/auth.json ended up inside
-        // vendor/, wiped on every module update and sitting in a git-tracked tree.
-        // Respect the environment instead, with the same private fallback as
-        // MelisComposer (never the shared /tmp).
+        // COMPOSER_HOME comes from the environment, with the same private fallback as
+        // MelisComposer.
         MelisComposer::ensureComposerHome();
 
         if (in_array($cmd, $this->availableCommands())) {
@@ -194,7 +190,7 @@ class MelisComposerService extends MelisServiceManager
             if ($this->getDryRun()) {
                 $dryRunArgs = self::DRY_RUN_ARGS;
             }
-            // CD-M5: consume the flag — it used to stay on for the rest of the request,
+            // Consume the flag — it used to stay on for the rest of the request,
             // silently turning every later real run into a dry run.
             $this->setDryRun(false);
 
@@ -211,7 +207,7 @@ class MelisComposerService extends MelisServiceManager
                     $commandString = "$cmd --working-dir=\"$docPath\"";
                 }
             }else
-                // CD-M5: align the remove branch with the others — honour $args
+                // Align the remove branch with the others — honour $args
                 // (REMOVE_ARGS was silently dropped), pin the working dir instead of
                 // relying on the chdir() below, and never allow an interactive prompt.
                 $commandString = "$cmd $package $dryRunArgs $args $ignoreReqs $noScript --no-interaction --working-dir=\"$docPath\"";
@@ -230,9 +226,8 @@ class MelisComposerService extends MelisServiceManager
 
             chdir($docPath);
 
-            // CD-M5: without this, Symfony's Application::run() ends with exit($code),
-            // killing the PHP request as soon as composer finishes — every caller's
-            // post-run code was dead and no failure was ever observable (gotcha 8).
+            // Without this, Symfony's Application::run() ends with exit($code),
+            // killing the PHP request as soon as composer finishes.
             $composer->setAutoExit(false);
             $this->lastExitCode = $composer->run($input, $output);
 
@@ -372,9 +367,7 @@ class MelisComposerService extends MelisServiceManager
 
         $this->runCommand(self::REMOVE, $package, self::REMOVE_ARGS);
 
-        // CD-M5: the old `!$output` test compared an always-truthy StreamOutput, so
-        // this reported failure even when composer succeeded (and was unreachable
-        // anyway while run() still exit()ed the request). Report the real outcome.
+        // Report the real outcome (exit code) of the composer run.
         return $this->getLastExitCode() === 0;
     }
 

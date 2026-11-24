@@ -33,14 +33,9 @@ class MelisComposer
     public function getComposer()
     {
         if (is_null($this->composer)) {
-            // SECURITY (audit CD-M1): this used to default COMPOSER_HOME to the shared,
-            // world-writable /tmp (and tested $_ENV, which is empty under the default
-            // variables_order=GPCS, so a COMPOSER_HOME actually present in the
-            // environment was ignored too). Any local user could pre-plant
-            // /tmp/config.json, /tmp/auth.json and globally-installed plugins and have
-            // the factory load them as the web user. Honour the real environment and
-            // fall back to a per-user 0700 directory instead; plugins are disabled —
-            // this consumer only reads the local repository and needs none.
+            // COMPOSER_HOME comes from the real environment, with a per-user 0700
+            // directory as fallback; plugins are disabled — this consumer only reads
+            // the local repository and needs none.
             static::ensureComposerHome();
             $factory = new Factory();
             $this->setComposer($factory->createComposer(new NullIO(), null, true));
@@ -72,9 +67,8 @@ class MelisComposer
             @mkdir($home, 0700, true);
         }
 
-        // mkdir above fails silently when the path already exists: refuse a
-        // directory pre-planted by another local user instead of reading its
-        // config.json/auth.json.
+        // mkdir above fails silently when the path already exists: the directory
+        // must belong to the current user.
         if (!is_dir($home)
             || (function_exists('posix_geteuid') && false !== ($owner = @fileowner($home)) && $owner !== $uid)) {
             throw new \RuntimeException(
@@ -131,7 +125,7 @@ class MelisComposer
      */
     public function getInstalledPackages()
     {
-        // PERF/SECURITY (audit AM-M6): cache the parsed installed.json across ALL instances.
+        // Cache the parsed installed.json across ALL instances.
         // MelisModulesService creates a fresh MelisComposer on nearly every call, so the former
         // per-instance ($this->packages) cache never helped — installed.json (~300 KB) was
         // re-read and re-decoded several times PER asset request (dozens per page). A process-wide
