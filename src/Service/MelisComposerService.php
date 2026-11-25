@@ -83,11 +83,9 @@ class MelisComposerService extends MelisServiceManager
      * to composer.
      *
      * Both $package and $version are interpolated into the command string that
-     * is handed to Symfony's StringInput (which tokenizes on whitespace), so an
-     * attacker-controlled value containing spaces could inject additional
-     * composer arguments/options. We therefore reject anything that does not
-     * strictly match a Composer package name (and, if given, a semver-ish
-     * version constraint).
+     * is handed to Symfony's StringInput (which tokenizes on whitespace), so
+     * each value must strictly match a Composer package name (and, if given, a
+     * semver-ish version constraint).
      *
      * @param string      $package
      * @param string|null $version
@@ -106,8 +104,7 @@ class MelisComposerService extends MelisServiceManager
         // Callers may legitimately pass a whitespace-separated LIST of packages:
         // MelisInstaller does exactly that (implode(' ', $downloadableModules)) when the
         // setup wizard downloads the modules the user picked. Validate every token
-        // individually — the injection guard still holds, because nothing but a
-        // well-formed package name can survive the check below.
+        // individually: only a well-formed package name passes the check below.
         $packages = preg_split('/\s+/', trim($package), -1, PREG_SPLIT_NO_EMPTY);
         if (empty($packages)) {
             throw new \InvalidArgumentException('Invalid composer package name.');
